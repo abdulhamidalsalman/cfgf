@@ -1,0 +1,45 @@
+# reverse proxy ngnix config file: /etc/nginx/sites-available/odoo
+
+upstream backend-odoo {
+  server 127.0.0.1:8069;
+}
+
+upstream backend-odoo-im {
+  server 127.0.0.1:8072;
+}
+
+server {
+  location / {
+    proxy_pass http://backend-odoo;
+  }
+  
+  location ~* /web/static/ {
+    # cache static data
+    proxy_cache_valid 200 60m;
+    proxy_buffering on;
+    expires 864000;
+    proxy_pass http://backend-odoo;
+  }
+
+  location /longpolling {
+    proxy_pass http://backend-odoo-im;
+  }
+
+# odoo log files
+access_log /var/log/nginx/odoo-access.log;
+error_log /var/log/nginx/odoo-error.log;
+
+# increase proxy buffer size
+proxy_buffers 16 64k;
+proxy_buffer_size 128k;
+
+# force timeouts if the backend dies
+proxy_next_upstream error timeout invalid_header http_500 http_502 http_503;
+
+#enable data compression
+gzip on;
+gzip_min_length 1100;
+gzip_buffers 4 32k;
+gzip_types text/plain application/x-javascript text/xml text/css;
+gzip_vary on;
+}
